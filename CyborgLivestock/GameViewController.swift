@@ -32,7 +32,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         scene.rootNode.addChildNode(camera)
 
         // Pan the camera slowly forever
-        let cameraPan = SCNAction.moveBy(x: 0, y: 0, z: 1, duration: 1)
+        let cameraPan = SCNAction.moveBy(x: 0, y: 0, z: -2, duration: 1)
         camera.runAction(.repeatForever(cameraPan))
 
 
@@ -41,20 +41,17 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         lightNode.light = SCNLight()
         lightNode.light!.type = .omni
         lightNode.position = SCNVector3(x: -10, y: 10, z: 0)
-        scene.rootNode.addChildNode(lightNode)
+        camera.addChildNode(lightNode)
         
         // create and add an ambient light to the scene
         let ambientLightNode = SCNNode()
         ambientLightNode.light = SCNLight()
         ambientLightNode.light!.type = .ambient
         ambientLightNode.light!.color = UIColor.darkGray
-        scene.rootNode.addChildNode(ambientLightNode)
+        camera.addChildNode(ambientLightNode)
 
         // set the scene to the view
         scnView.scene = scene
-        
-        // allows the user to manipulate the camera
-        scnView.allowsCameraControl = true
         
         // show statistics such as fps and timing information
         scnView.showsStatistics = true
@@ -107,20 +104,52 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     // MARK: - SCNSceneRendererDelegate
     //==========================================================================
 
+    var spawnTime: TimeInterval = 0
     func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
+        if time > spawnTime {
+            spawnBuilding(z: camera.position.z - 20)
+            spawnTime = time + 0.5
+        }
 
+        cleanUpBuildings()
     }
 
     //==========================================================================
     // MARK: - Spawn Ship
     //==========================================================================
 
-    func spawnBlock() {
-        // retrieve the ship node
+    func spawnBuilding(z: Float) {
+        let geometry = SCNBox(width: .random(upperBound: 4) + 1, height: .random(upperBound: 12) + 1, length: .random(upperBound: 4) + 1, chamferRadius: 0)
 
+        let material = SCNMaterial()
+        material.diffuse.contents = UIColor(hue: CGFloat(arc4random_uniform(355))/355.0, saturation: 1.0, brightness: 1.0, alpha: 1.0)
 
+        geometry.materials = [material]
 
+        let node = SCNNode()
+        node.geometry = geometry
+
+        node.position.z = z
+        node.position.x = .random(upperBound: 12) - 6.0
+
+        scnView.scene?.rootNode.addChildNode(node)
     }
+
+    func cleanUpBuildings() {
+        for node in scnView.scene!.rootNode.childNodes {
+            if node === camera {
+                continue
+            }
+
+            if camera.position.z < node.position.z, !scnView.isNode(node, insideFrustumOf: camera) {
+                node.removeFromParentNode()
+            }
+        }
+    }
+
+    //==========================================================================
+    // MARK: - Camera
+    //==========================================================================
 
     lazy var camera: SCNNode = {
         let node = SCNNode()
