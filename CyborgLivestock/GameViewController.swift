@@ -9,8 +9,11 @@
 import UIKit
 import QuartzCore
 import SceneKit
+import CoreMotion
 
 class GameViewController: UIViewController, SCNSceneRendererDelegate {
+
+    let motionManager = CMMotionManager()
 
     var scnView: SCNView! {
         return view as! SCNView
@@ -23,6 +26,8 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        motionManager.startAccelerometerUpdates()
+
         scnView.delegate = self
         
         // create a new scene
@@ -34,7 +39,7 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         // Pan the camera slowly forever
         let cameraPan = SCNAction.moveBy(x: 0, y: 0, z: -2, duration: 1)
         camera.runAction(.repeatForever(cameraPan))
-
+        player.runAction(.repeatForever(cameraPan))
 
         // create and add a light to the scene
         let lightNode = SCNNode()
@@ -49,6 +54,8 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         ambientLightNode.light!.type = .ambient
         ambientLightNode.light!.color = UIColor.darkGray
         camera.addChildNode(ambientLightNode)
+
+        scene.rootNode.addChildNode(player)
 
         // set the scene to the view
         scnView.scene = scene
@@ -112,6 +119,10 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
         }
 
         cleanUpBuildings()
+
+        if let accelerometerData = motionManager.accelerometerData {
+//            player.position.x += Float(accelerometerData.acceleration.x)
+        }
     }
 
     //==========================================================================
@@ -146,6 +157,24 @@ class GameViewController: UIViewController, SCNSceneRendererDelegate {
             }
         }
     }
+
+    //==========================================================================
+    // MARK: - Player
+    //==========================================================================
+
+    lazy var player: SCNNode = {
+        let node = SCNNode()
+        node.geometry = SCNBox(width: 1, height: 1, length: 2, chamferRadius: 1)
+
+        let material = SCNMaterial()
+        material.diffuse.contents = UIColor.white
+
+        node.geometry?.materials = [material]
+
+        node.position = SCNVector3(x: 0, y: 15, z: 5)
+
+        return node
+    }()
 
     //==========================================================================
     // MARK: - Camera
